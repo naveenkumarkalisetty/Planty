@@ -54,7 +54,7 @@ To keep the repository lightweight and avoid GitHub's file size limits, the AI m
 ### 1. Download the AI Models
 1. Create a folder named `models/` in the root of the project.
 2. Download the local LLM (**SmolLM2-135M-Instruct-Q4_K_M**) from Hugging Face:
-   * [smollm2-135m-instruct-q4_k_m.gguf](https://huggingface.co/HuggingFaceTB/SmolLM2-135M-Instruct-GGUF/resolve/main/smollm2-135m-instruct-q4_k_m.gguf)
+   * [smollm2-135m-instruct-q4_k_m.gguf](https://huggingface.co/unsloth/SmolLM2-135M-Instruct-GGUF/tree/main)
 3. Download the Computer Vision classification model (**plant_model.tflite**):
    * [plant_model.tflite](https://www.kaggle.com/models/google/aiy/tfLite/vision-classifier-plants-v1)
 4. Place both downloaded files (`.gguf` and `.tflite`) inside the `models/` directory.
