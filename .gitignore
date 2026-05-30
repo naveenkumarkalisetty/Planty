@@ -46,3 +46,5 @@ example
 models/
 *.gguf
 *.tflite
+server/.env
+server/node_modules

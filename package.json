@@ -5,6 +5,7 @@
   "dependencies": {
     "@expo/ui": "~56.0.14",
     "@expo/vector-icons": "^15.0.2",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~56.0.5",
     "expo-constants": "~56.0.16",
     "expo-dev-client": "~56.0.16",
@@ -28,6 +29,7 @@
     "react-native-fast-tflite": "^3.0.1",
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "~2.31.1",
+    "react-native-keyboard-aware-scroll-view": "^0.9.5",
     "react-native-nitro-image": "^0.15.0",
     "react-native-nitro-modules": "^0.35.9",
     "react-native-reanimated": "4.3.1",

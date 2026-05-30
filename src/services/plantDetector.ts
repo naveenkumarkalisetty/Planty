@@ -31,20 +31,22 @@ export interface DetectionResult {
   plantInfo: PlantInfo | null;
   /** Class index in the label list */
   classIndex: number;
+  /** Top 5 predictions if we want to show alternatives */
+  topPredictions?: { label: string; confidence: number }[];
 }
 
 // ─── Constants ────────────────────────────────────────────────────
 /** Model input image size – standard MobileNet */
 const INPUT_SIZE = 224;
 const MODEL_ASSET = require("../../models/plant_model.tflite");
-const CONFIDENCE_THRESHOLD = 0.05; // minimum confidence to report
+const CONFIDENCE_THRESHOLD = 0.80; // minimum confidence to report
 
 // ─── Singleton model reference ────────────────────────────────────
 let modelPromise: ReturnType<typeof loadTensorflowModel> | null = null;
 const labels: string[] = labelsJson as string[];
 
-import RNFS from 'react-native-fs';
 import { Platform } from 'react-native';
+import RNFS from 'react-native-fs';
 
 /**
  * Lazily loads the TFLite model (only once).
@@ -52,18 +54,27 @@ import { Platform } from 'react-native';
 async function loadModelAsync() {
   console.log("[PlantDetector] Loading model...");
   let modelPath = MODEL_ASSET;
-  
+
   if (Platform.OS === 'android') {
     const destPath = `${RNFS.DocumentDirectoryPath}/plant_model.tflite`;
-    const exists = await RNFS.exists(destPath);
-    if (!exists) {
-      console.log(`[PlantDetector] Copying model to ${destPath}...`);
-      await RNFS.copyFileAssets('plant_model.tflite', destPath);
+
+    // We force delete and recopy the asset to ensure we don't accidentally load an old cached model
+    try {
+      const exists = await RNFS.exists(destPath);
+      if (exists) {
+        await RNFS.unlink(destPath);
+      }
+    } catch (e) {
+      console.log("[PlantDetector] Error clearing old model:", e);
     }
+
+    console.log(`[PlantDetector] Copying model to ${destPath}...`);
+    await RNFS.copyFileAssets('plant_model.tflite', destPath);
+
     // react-native-fast-tflite requires an object with a 'url' property for paths
     return loadTensorflowModel({ url: `file://${destPath}` }, []);
   }
-  
+
   // For iOS or dev mode where require() works
   return loadTensorflowModel(MODEL_ASSET, []);
 }
@@ -155,19 +166,19 @@ export async function detectPlant(
     // We resize natively to 224x224 to avoid looping over millions of pixels in JS
     console.log("[PlantDetector] Loading image via nitro...");
     const image = await loadImage({ filePath: photoPath });
-    
+
     // 1. Center crop the image to a square to prevent aspect ratio distortion
     const minSize = Math.min(image.width, image.height);
     const startX = (image.width - minSize) / 2;
     const startY = (image.height - minSize) / 2;
     console.log(`[PlantDetector] Cropping ${image.width}x${image.height} to square (${minSize}x${minSize})`);
-    
+
     const squareImage = await image.cropAsync(startX, startY, startX + minSize, startY + minSize);
 
     // 2. Resize to the model's expected 224x224
     console.log(`[PlantDetector] Resizing square to ${INPUT_SIZE}x${INPUT_SIZE}...`);
     const resizedImage = await squareImage.resizeAsync(INPUT_SIZE, INPUT_SIZE);
-    
+
     console.log("[PlantDetector] Getting raw pixel data...");
     const rawData = await resizedImage.toRawPixelDataAsync();
     const pixelFormat = rawData.pixelFormat;
@@ -201,28 +212,28 @@ export async function detectPlant(
     let dstIdx = 0;
     for (let i = 0; i < pixelBytes.length; i += bytesPerPixel) {
       if (dstIdx >= inputSize) break;
-      
+
       const r = pixelBytes[i + rIdx];
       const g = pixelBytes[i + gIdx];
       const b = pixelBytes[i + bIdx];
-      
+
       // Float32 format: normalized to [0, 1]
       inputBuffer[dstIdx] = r / 255.0;
       inputBuffer[dstIdx + 1] = g / 255.0;
       inputBuffer[dstIdx + 2] = b / 255.0;
-      
+
       // Uint8 format: [0-255]
       uint8Input[dstIdx] = r;
       uint8Input[dstIdx + 1] = g;
       uint8Input[dstIdx + 2] = b;
-      
+
       dstIdx += 3;
     }
 
     // DEBUG: Log the first and center pixel values to verify they aren't zero/garbage
     console.log(`[PlantDetector] Pixel[0] (top-left): R=${uint8Input[0]}, G=${uint8Input[1]}, B=${uint8Input[2]}`);
     const centerIdx = (112 * 224 + 112) * 3;
-    console.log(`[PlantDetector] Pixel[Center]: R=${uint8Input[centerIdx]}, G=${uint8Input[centerIdx+1]}, B=${uint8Input[centerIdx+2]}`);
+    console.log(`[PlantDetector] Pixel[Center]: R=${uint8Input[centerIdx]}, G=${uint8Input[centerIdx + 1]}, B=${uint8Input[centerIdx + 2]}`);
 
     // 2. Run inference
     console.log("[PlantDetector] Running inference...");
@@ -232,7 +243,7 @@ export async function detectPlant(
     let outputs: ArrayBuffer[];
     const inputType = model.inputs[0]?.dataType;
     console.log(`[PlantDetector] Model expects input type: ${inputType}`);
-    
+
     try {
       if (inputType === 'uint8') {
         outputs = model.runSync([uint8Input.buffer as ArrayBuffer]);
@@ -270,7 +281,7 @@ export async function detectPlant(
         isQuantizedOutput = true;
       }
     }
-    
+
     console.log(`[PlantDetector] Output tensor size: ${outputData.length}, isQuantized: ${isQuantizedOutput}`);
 
     // Find top prediction (argmax)
@@ -279,7 +290,7 @@ export async function detectPlant(
     for (let i = 0; i < outputData.length; i++) {
       let val = outputData[i];
       if (isQuantizedOutput) val = val / 255.0;
-      
+
       if (val > maxVal) {
         maxVal = val;
         maxIdx = i;
@@ -290,7 +301,7 @@ export async function detectPlant(
       `[PlantDetector] Top prediction: idx=${maxIdx}, confidence=${maxVal.toFixed(4)}, label="${labels[maxIdx] || "unknown"}"`
     );
 
-    // Log top 5 predictions for debugging
+    // Log top 5 predictions for debugging and return them
     const indices = Array.from({ length: outputData.length }, (_, i) => i);
     indices.sort((a, b) => {
       let valA = outputData[a];
@@ -301,19 +312,32 @@ export async function detectPlant(
       }
       return valB - valA;
     });
+
     console.log("[PlantDetector] Top 5 predictions:");
+    const topPredictions: { label: string; confidence: number }[] = [];
     for (let i = 0; i < Math.min(5, indices.length); i++) {
       const idx = indices[i];
       let val = outputData[idx];
       if (isQuantizedOutput) val /= 255.0;
-      console.log(
-        `  ${i + 1}. ${labels[idx] || `class_${idx}`}: ${(val * 100).toFixed(2)}%`
-      );
+
+      const labelName = labels[idx] || `class_${idx}`;
+      console.log(`  ${i + 1}. ${labelName}: ${(val * 100).toFixed(2)}%`);
+
+      topPredictions.push({
+        label: labelName,
+        confidence: val
+      });
     }
 
     if (maxVal < CONFIDENCE_THRESHOLD) {
-      console.log("[PlantDetector] Below confidence threshold, returning null");
-      return null;
+      console.log("[PlantDetector] Below confidence threshold, returning 'Unknown' with top predictions");
+      return {
+        scientificName: "Unknown",
+        confidence: maxVal,
+        plantInfo: null,
+        classIndex: -1,
+        topPredictions,
+      };
     }
 
     const scientificName = labels[maxIdx] || `Unknown (class ${maxIdx})`;
@@ -324,6 +348,7 @@ export async function detectPlant(
       confidence: maxVal,
       plantInfo,
       classIndex: maxIdx,
+      topPredictions,
     };
   } catch (error) {
     console.error("[PlantDetector] Detection error:", error);
