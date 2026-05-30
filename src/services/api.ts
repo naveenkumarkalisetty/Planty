@@ -8,7 +8,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
-const BASE_URL = "http://192.168.1.64:5000/api";
+const BASE_URL = `${process.env.EXPO_PUBLIC_BASE_URL}/api`;
 
 const TOKEN_KEY = "planty_jwt";
 const USER_KEY = "planty_user";

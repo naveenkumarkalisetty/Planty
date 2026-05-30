@@ -48,3 +48,4 @@ example
 *.tflite
 server/.env
 server/node_modules
+.env
