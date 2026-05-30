@@ -43,7 +43,7 @@ example
 # /android
 
 # AI Models
-models/
+/models/
 *.gguf
 *.tflite
 server/.env
