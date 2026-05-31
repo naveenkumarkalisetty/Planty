@@ -15,7 +15,7 @@ export interface PlantInfo {
  */
 export const PLANT_DATABASE: Record<string, PlantInfo> = {
   // ─── Popular Ayurvedic Plants ───────────────────────────────────
-  "Ocimum tenuiflorum": {
+  "tulsi": {
     commonName: "Tulsi (Holy Basil)",
     scientificName: "Ocimum tenuiflorum",
     family: "Lamiaceae",
@@ -31,7 +31,7 @@ export const PLANT_DATABASE: Record<string, PlantInfo> = {
     parts: ["Leaves", "Seeds", "Root"],
   },
 
-  "Azadirachta indica": {
+  "neem": {
     commonName: "Neem",
     scientificName: "Azadirachta indica",
     family: "Meliaceae",
@@ -47,7 +47,7 @@ export const PLANT_DATABASE: Record<string, PlantInfo> = {
     parts: ["Leaves", "Bark", "Seeds", "Oil"],
   },
 
-  "Aloe vera": {
+  "aloe_vera": {
     commonName: "Aloe Vera (Ghritkumari)",
     scientificName: "Aloe vera",
     family: "Asphodelaceae",
@@ -79,7 +79,7 @@ export const PLANT_DATABASE: Record<string, PlantInfo> = {
     parts: ["Rhizome"],
   },
 
-  "Withania somnifera": {
+  "ashwagandha": {
     commonName: "Ashwagandha",
     scientificName: "Withania somnifera",
     family: "Solanaceae",
@@ -111,7 +111,7 @@ export const PLANT_DATABASE: Record<string, PlantInfo> = {
     parts: ["Fruit"],
   },
 
-  "Bacopa monnieri": {
+  "brahmi": {
     commonName: "Brahmi",
     scientificName: "Bacopa monnieri",
     family: "Plantaginaceae",
